@@ -61,14 +61,14 @@ class PostFormTest(TestCase):
         """Валидная форма создает запись."""
         posts_count = Post.objects.count()
         small_gif = (
-             b'\x47\x49\x46\x38\x39\x61\x02\x00'
-             b'\x01\x00\x80\x00\x00\x00\x00\x00'
-             b'\xFF\xFF\xFF\x21\xF9\x04\x00\x00'
-             b'\x00\x00\x00\x2C\x00\x00\x00\x00'
-             b'\x02\x00\x01\x00\x00\x02\x02\x0C'
-             b'\x0A\x00\x3B'
+            b'\x47\x49\x46\x38\x39\x61\x02\x00'
+            b'\x01\x00\x80\x00\x00\x00\x00\x00'
+            b'\xFF\xFF\xFF\x21\xF9\x04\x00\x00'
+            b'\x00\x00\x00\x2C\x00\x00\x00\x00'
+            b'\x02\x00\x01\x00\x00\x02\x02\x0C'
+            b'\x0A\x00\x3B'
         )
-        uploaded = SimpleUploadedFile(
+        SimpleUploadedFile(
             name='small.gif',
             content=small_gif,
             content_type='image/gif'
@@ -121,7 +121,7 @@ class PostFormTest(TestCase):
     def test_write_comment_can_only_authorized_user(self):
         """Писать комментарии может только авторизованный пользвоатель."""
         form_data = {'text': self.comment_text}
-        response_comment_guest = self.guest_client.post(
+        self.guest_client.post(
             reverse(ADD_COMMENT_URL, kwargs={'post_id': self.post.pk}),
             data=form_data,
             follow=True,
@@ -129,7 +129,7 @@ class PostFormTest(TestCase):
         self.assertFalse(
             Comment.objects.filter(text=form_data['text']).exists()
         )
-        response_comment_authorized = self.authorized_client.post(
+        self.authorized_client.post(
             reverse(ADD_COMMENT_URL, kwargs={'post_id': self.post.pk}),
             data=form_data,
             follow=True,
@@ -142,7 +142,7 @@ class PostFormTest(TestCase):
         """После отправки комментарий появляется на странице поста."""
         form_data = {'text': self.comment_text}
         post_comments = 0
-        response_comment = self.authorized_client.post(
+        self.authorized_client.post(
             reverse(ADD_COMMENT_URL, kwargs={'post_id': self.post.pk}),
             data=form_data,
             follow=True,

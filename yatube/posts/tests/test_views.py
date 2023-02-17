@@ -5,9 +5,7 @@ from django.test import Client, TestCase
 from django.urls import reverse
 from django.core.cache import cache
 
-from django import forms
-
-from posts.forms import CommentForm, PostForm
+from posts.forms import PostForm
 from posts.models import Group, Post, User
 from posts.utils import NUMBER_OF_POSTS
 
@@ -250,17 +248,15 @@ class PostsViewsTests(TestCase):
         других пользователей и удалять их из подписок."""
         follower = User.objects.get(username=self.user)
         follows_count = follower.follower.all().count()
-        response_follow = self.authorized_client.get(
-            reverse(
-                FOLLOW_URL,
-                kwargs={'username': self.post.author})
+        self.authorized_client.get(reverse(
+            FOLLOW_URL,
+            kwargs={'username': self.post.author})
         )
         self.assertEqual(follower.follower.all().count(), follows_count + 1)
         follows_before_unfollow = follower.follower.all().count()
-        response_unfollow = self.authorized_client.get(
-            reverse(
-                UNFOLLOW_URL,
-                kwargs={'username': self.post.author})
+        self.authorized_client.get(reverse(
+            UNFOLLOW_URL,
+            kwargs={'username': self.post.author})
         )
         self.assertEqual(
             follower.follower.all().count(),
@@ -270,11 +266,9 @@ class PostsViewsTests(TestCase):
     def test_new_post_on_followers_page(self):
         """Новая запись пользователя появляется в ленте тех,
         кто на него подписан и не появляется в ленте тех, кто не подписан."""
-        follower = User.objects.get(username=self.user)
-        response_follow = self.authorized_client.get(
-            reverse(
-                FOLLOW_URL,
-                kwargs={'username': self.post.author})
+        self.authorized_client.get(reverse(
+            FOLLOW_URL,
+            kwargs={'username': self.post.author})
         )
         Post.objects.create(
             text=self.post.text,
@@ -285,7 +279,6 @@ class PostsViewsTests(TestCase):
         )
         new_post_in_context = response_new_post_in_feed.context['page_obj'][0]
         self.assertEqual(new_post_in_context.text, self.post.text)
-        
         response_unfollow_user = self.unfollowing_user.get(
             reverse(FOLLOW_INDEX_URL)
         )
@@ -296,9 +289,8 @@ class PostsViewsTests(TestCase):
         """Нельзя подписаться на самого себя."""
         follower = User.objects.get(username=self.user)
         followers_count = follower.follower.all().count()
-        response_follow = self.authorized_client.get(
-            reverse(
-                FOLLOW_URL,
-                kwargs={'username': self.user})
+        self.authorized_client.get(reverse(
+            FOLLOW_URL,
+            kwargs={'username': self.user})
         )
         self.assertEqual(followers_count, 0)
