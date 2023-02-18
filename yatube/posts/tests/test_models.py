@@ -23,7 +23,7 @@ class PostModelTest(TestCase):
         """Проверяем, что у моделей корректно работает __str__."""
         test_str = {
             self.group.title: self.group,
-            self.post.text[FIRST_FIFTEEN_CHARS_OF_TEXT]: self.post,
+            self.post.text[:FIRST_FIFTEEN_CHARS_OF_TEXT]: self.post,
         }
         for correct_str, expected_value in test_str.items():
             with self.subTest(correct_str=correct_str):

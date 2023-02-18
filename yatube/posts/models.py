@@ -48,7 +48,7 @@ class Post(models.Model):
     )
 
     def __str__(self):
-        return self.text[FIRST_FIFTEEN_CHARS_OF_TEXT]
+        return self.text[:FIRST_FIFTEEN_CHARS_OF_TEXT]
 
     class Meta:
         ordering = ['-pub_date']

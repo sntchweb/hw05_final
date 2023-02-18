@@ -68,7 +68,7 @@ class PostFormTest(TestCase):
             b'\x02\x00\x01\x00\x00\x02\x02\x0C'
             b'\x0A\x00\x3B'
         )
-        SimpleUploadedFile(
+        uploaded_image = SimpleUploadedFile(
             name='small.gif',
             content=small_gif,
             content_type='image/gif'
@@ -76,6 +76,7 @@ class PostFormTest(TestCase):
         form_data = {
             'text': self.test_text,
             'group': self.post.group.id,
+            'image': uploaded_image,
         }
         response = self.authorized_client.post(
             reverse(POST_CREATE_URL),
@@ -92,6 +93,9 @@ class PostFormTest(TestCase):
         )
         self.assertTrue(
             Post.objects.filter(group=form_data['group']).exists()
+        )
+        self.assertTrue(
+            Post.objects.filter(image='posts/small.gif').exists()
         )
         new_post_author = Post.objects.get(author=self.user)
         self.assertEqual(

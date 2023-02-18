@@ -1,14 +1,21 @@
+import shutil
+import tempfile
+
 from http import HTTPStatus
 
 from django.core.paginator import Page
-from django.test import Client, TestCase
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
+from django.conf import settings
 from django.core.cache import cache
+from django.core.files.uploadedfile import SimpleUploadedFile
 
 from posts.forms import PostForm
 from posts.models import Group, Post, User
 from posts.utils import NUMBER_OF_POSTS
 
+
+TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
 
 INDEX_URL = 'posts:index'
 GROUP_URL = 'posts:group_list'
@@ -29,6 +36,7 @@ POST_EDIT_TEMPLATE = 'posts/create_post.html'
 FOLLOW_INDEX_TEMPLATE = 'posts/follow.html'
 
 
+@override_settings(MEDIA_ROOT=TEMP_MEDIA_ROOT)
 class PostsViewsTests(TestCase):
     @classmethod
     def setUpClass(cls):
@@ -48,6 +56,18 @@ class PostsViewsTests(TestCase):
                 group=cls.post.group
             ) for i in range(NUMBER_OF_POSTS + 2)
         ])
+        cls.pages_urls = [
+            reverse(INDEX_URL),
+            reverse(GROUP_URL, args=[cls.post.group.slug]),
+            reverse(PROFILE_URL, args=[cls.post.author]),
+            # reverse(POST_DETAIL_URL, args=[self.post.pk]),
+        ]
+        cls.test_text = 'test text'
+
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
 
     def setUp(self):
         self.unfollowing_user = Client()
@@ -88,7 +108,6 @@ class PostsViewsTests(TestCase):
         context_object = response.context['page_obj'][0]
         self.assertEqual(context_object.text, self.post.text)
         self.assertEqual(context_object.group.title, self.post.group.title)
-        self.assertIsNotNone(context_object.image)
         self.assertEqual(
             context_object.author.username,
             self.post.author.username
@@ -105,7 +124,6 @@ class PostsViewsTests(TestCase):
         self.assertEqual(context_object.group.title, self.post.group.title)
         self.assertEqual(context_object_group.title, self.post.group.title)
         self.assertEqual(context_object_group.slug, self.post.group.slug)
-        self.assertIsNotNone(context_object.image)
 
     def test_profile_context(self):
         """Шаблон profile/ сформирован с правильным контекстом."""
@@ -116,7 +134,6 @@ class PostsViewsTests(TestCase):
         context_object_author = response.context['author']
         self.assertEqual(context_object.text, self.post.text)
         self.assertEqual(context_object.group.title, self.post.group.title)
-        self.assertIsNotNone(context_object.image)
         self.assertEqual(
             context_object.author.username,
             self.post.author.username
@@ -134,7 +151,6 @@ class PostsViewsTests(TestCase):
         context_object = response.context['post']
         self.assertEqual(context_object.text, self.post.text)
         self.assertEqual(context_object.group.title, self.post.group.title)
-        self.assertIsNotNone(context_object.image)
         self.assertEqual(
             context_object.author.username,
             self.post.author.username
@@ -199,12 +215,7 @@ class PostsViewsTests(TestCase):
         и profile/ равно 10. Страница доступна, у страницы нужный тип
         и != None.
         """
-        urls_expected_post_number = [
-            reverse(INDEX_URL),
-            reverse(GROUP_URL, args=[self.post.group.slug]),
-            reverse(PROFILE_URL, args=[self.post.author])
-        ]
-        for url in urls_expected_post_number:
+        for url in self.pages_urls:
             response = self.client.get(url)
             self.assertEqual(response.status_code, HTTPStatus.OK)
             page_obj = response.context.get('page_obj')
@@ -217,12 +228,7 @@ class PostsViewsTests(TestCase):
         и profile/ равно 3. Страница доступна, у страницы нужный тип
         и != None.
         """
-        urls_expected_post_number = [
-            reverse(INDEX_URL),
-            reverse(GROUP_URL, args=[self.post.group.slug]),
-            reverse(PROFILE_URL, args=[self.post.author])
-        ]
-        for url in urls_expected_post_number:
+        for url in self.pages_urls:
             response = self.client.get(url + '?page=2')
             self.assertEqual(response.status_code, HTTPStatus.OK)
             page_obj = response.context.get('page_obj')
@@ -294,3 +300,43 @@ class PostsViewsTests(TestCase):
             kwargs={'username': self.user})
         )
         self.assertEqual(followers_count, 0)
+
+    def test_new_post_image_in_context(self):
+        """Изображение передаётся в словаре контекста на страницы:
+        index/, group_list/, post_detail/, profile/."""
+        small_gif = (
+            b'\x47\x49\x46\x38\x39\x61\x02\x00'
+            b'\x01\x00\x80\x00\x00\x00\x00\x00'
+            b'\xFF\xFF\xFF\x21\xF9\x04\x00\x00'
+            b'\x00\x00\x00\x2C\x00\x00\x00\x00'
+            b'\x02\x00\x01\x00\x00\x02\x02\x0C'
+            b'\x0A\x00\x3B'
+        )
+        uploaded_image = SimpleUploadedFile(
+            name='small.gif',
+            content=small_gif,
+            content_type='image/gif'
+        )
+        form_data = {
+            'text': self.post.text,
+            'group': self.post.group.id,
+            'image': uploaded_image,
+        }
+        self.authorized_post_author.post(
+            reverse(POST_CREATE_URL),
+            data=form_data,
+            follow=True,
+        )
+        for url in self.pages_urls:
+            response = self.authorized_client.get(url)
+            context_object = response.context['page_obj'][0]
+            self.assertEqual(context_object.image, 'posts/small.gif')
+        created_post = Post.objects.get(
+            text=self.post.text,
+            image='posts/small.gif'
+        )
+        response_post_detail = self.authorized_client.get(
+            reverse(POST_DETAIL_URL, args=[created_post.pk])
+        )
+        context_object = response_post_detail.context['post']
+        self.assertEqual(context_object.image, 'posts/small.gif')
