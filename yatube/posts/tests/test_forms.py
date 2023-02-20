@@ -6,7 +6,7 @@ from django.urls import reverse
 from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 
-from posts.models import Group, Post, Comment, User
+from posts.models import Group, Post, User
 
 
 TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
@@ -132,7 +132,11 @@ class PostFormTest(TestCase):
         """Писать комментарии может только авторизованный пользвоатель."""
         form_data = {'text': COMMENT_TEXT}
         post_comments = 0
-        self.authorized_client.post(ADD_COMMENT_URL, data=form_data,follow=True)
+        self.authorized_client.post(
+            ADD_COMMENT_URL,
+            data=form_data,
+            follow=True
+        )
         post = Post.objects.get(pk=self.post.pk)
         total_post_comments = post.comments.count()
         self.assertEqual(total_post_comments, post_comments + 1)

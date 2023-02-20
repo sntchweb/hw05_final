@@ -22,7 +22,7 @@ class PostModelTest(TestCase):
         cls.post = Post.objects.create(
             author=cls.user,
             text=TEXT_FOR_STR_TEST,
-            group = Group.objects.create(
+            group=Group.objects.create(
                 title=TEST_GROUP_TITLE,
                 slug=GROUP_SLUG,
                 description=TEST_GROUP_DESCRIPTION)

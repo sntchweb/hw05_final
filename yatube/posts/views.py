@@ -12,9 +12,10 @@ def index(request):
     return render(
         request,
         'posts/index.html',
-        {'page_obj': get_pages(
-            request,
-            Post.objects.select_related('author', 'group').all())
+        {
+            'page_obj': get_pages(
+                request,
+                Post.objects.select_related('author', 'group').all())
         }
     )
 
@@ -35,8 +36,7 @@ def group_posts(request, slug):
 def profile(request, username):
     author = get_object_or_404(User, username=username)
     if (request.user.is_authenticated) and (request.user != author) and not (
-        Follow.objects.filter(user=request.user,author=author).exists()
-        ):
+        Follow.objects.filter(user=request.user, author=author).exists()):
         return render(
             request,
             'posts/profile.html',
@@ -118,9 +118,10 @@ def follow_index(request):
     return render(
         request,
         'posts/follow.html',
-        {'page_obj': get_pages(
-            request,
-            Post.objects.filter(author__following__user=request.user))
+        {
+            'page_obj': get_pages(
+                request,
+                Post.objects.filter(author__following__user=request.user))
         }
     )
 
