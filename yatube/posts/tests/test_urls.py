@@ -8,12 +8,22 @@ from posts.models import Group, Post, User
 from yatube.urls import handler404, handler403
 
 
-INDEX_URL = 'posts:index'
-GROUP_URL = 'posts:group_list'
-PROFILE_URL = 'posts:profile'
-POST_ID_URL = 'posts:post_detail'
-POST_CREATE_URL = 'posts:post_create'
-POST_EDIT_URL = 'posts:post_edit'
+GROUP_SLUG = 'test_group'
+TEST_USER = 'test_urls1'
+TEST_AUTHOR = 'test_urls0'
+TEST_POST_TEXT = 'Test post text'
+TEST_GROUP_TITLE = 'Test group title'
+TEST_GROUP_DESCRIPTION = 'Test group description'
+POST_PK = 1
+
+INDEX_URL = reverse('posts:index')
+GROUP_URL = reverse('posts:group_list', args=[GROUP_SLUG])
+PROFILE_URL = reverse('posts:profile', args=[TEST_USER])
+POST_ID_URL = reverse('posts:post_detail', args=[POST_PK])
+POST_CREATE_URL = reverse('posts:post_create')
+POST_EDIT_URL = reverse('posts:post_edit', args=[POST_PK])
+POST_CREATE_REDIRECT_URL = '/auth/login/?next=/create/'
+POST_EDIT_REDIRECT_URL = f'/auth/login/?next=/posts/{POST_PK}/edit/'
 UNEXISTING_PAGE_URL = '/bad/address/'
 CUSTOM_404_PAGE_URL = handler404
 CUSTOM_403_PAGE_URL = handler403
@@ -30,58 +40,81 @@ class PostURLSTests(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.user = User.objects.create_user(username='test_urls1')
-        cls.author = User.objects.create_user(username='test_urls0')
+        cls.user = User.objects.create_user(username=TEST_USER)
+        cls.author = User.objects.create_user(username=TEST_AUTHOR)
         cls.post = Post.objects.create(
-            text='Test post text',
+            text=TEST_POST_TEXT,
             author=cls.author,
         )
         cls.group = Group.objects.create(
-            title='Test group title',
-            slug='test_group',
-            description='Test group description'
+            title=TEST_GROUP_TITLE,
+            slug=GROUP_SLUG,
+            description=TEST_GROUP_DESCRIPTION,
         )
-        cls.url_templates_names = {
-            INDEX_URL: (INDEX_TEMPLATE, {}),
-            GROUP_URL: (GROUP_TEMPLATE, {'slug': cls.group.slug}),
-            PROFILE_URL: (PROFILE_TEMPLATE, {'username': cls.user}),
-            POST_ID_URL: (POST_ID_TEMPLATE, {'post_id': cls.post.pk})
-        }
+        cls.guest_client = Client()
+        cls.guest_client = Client()
+        cls.authorized_client = Client()
+        cls.authorized_client.force_login(cls.user)
+        cls.authorized_client_post_author = Client()
+        cls.authorized_client_post_author.force_login(cls.author)
+        cls.index_data = (
+            INDEX_URL,
+            INDEX_TEMPLATE,
+            cls.guest_client,
+            HTTPStatus.OK
+        )
+        cls.groups_data = (
+            GROUP_URL,
+            GROUP_TEMPLATE,
+            cls.guest_client,
+            HTTPStatus.OK
+        )
+        cls.profile_data = (
+            PROFILE_URL,
+            PROFILE_TEMPLATE,
+            cls.guest_client,
+            HTTPStatus.OK
+        )
+        cls.post_detail_data = (
+            POST_ID_URL,
+            POST_ID_TEMPLATE,
+            cls.guest_client,
+            HTTPStatus.OK
+        )
+        cls.unexisting_page_data = (
+            UNEXISTING_PAGE_URL,
+            CUSTOM_404_PAGE_TEMPLATE,
+            cls.guest_client,
+            HTTPStatus.NOT_FOUND
+        )
+        cls.pages = (
+            cls.index_data,
+            cls.groups_data,
+            cls.profile_data,
+            cls.post_detail_data,
+            cls.unexisting_page_data,
+        )
 
     def setUp(self):
-        self.guest_client = Client()
-        self.authorized_client = Client()
-        self.authorized_client.force_login(self.user)
-        self.authorized_client_post_author = Client()
-        self.authorized_client_post_author.force_login(self.author)
         cache.clear()
 
     def test_urls_for_unauthorized_user(self):
         """Страницы index, group/<slug>/, profile/<username>/ и
         posts/<post_id>/ доступны любому пользователю.
         """
-        pages = {
-            reverse(INDEX_URL): HTTPStatus.OK,
-            reverse(GROUP_URL, args=[self.group.slug]): HTTPStatus.OK,
-            reverse(PROFILE_URL, args=[self.user]): HTTPStatus.OK,
-            reverse(POST_ID_URL, args=[self.post.pk]): HTTPStatus.OK,
-            UNEXISTING_PAGE_URL: HTTPStatus.NOT_FOUND,
-        }
-        for field, expected_value in pages.items():
-            response = self.guest_client.get(field)
-            with self.subTest(field=field):
-                self.assertEqual(response.status_code, expected_value)
+        for url, template, client, status_code in self.pages:
+            with self.subTest(url=url):
+                response = client.get(url)
+                self.assertEqual(response.status_code, status_code)
 
     def test_post_edit_available_to_author(self):
         """Страница posts/<post_id>/edit/ доступна автору поста."""
-        response = self.authorized_client_post_author.get(
-            reverse(POST_EDIT_URL, kwargs={'post_id': self.post.pk})
-        )
+        response = self.authorized_client_post_author.get(POST_EDIT_URL)
         self.assertEqual(response.status_code, HTTPStatus.OK)
 
     def test_create_post_authorized_user(self):
         """Страница create/ доступна авторизованному пользователю."""
-        response = self.authorized_client.get(reverse(POST_CREATE_URL))
+        response = self.authorized_client.get(POST_CREATE_URL)
         self.assertEqual(response.status_code, HTTPStatus.OK)
 
     def test_create_url_redirect_anonymous_on_login(self):
@@ -89,11 +122,8 @@ class PostURLSTests(TestCase):
         пользователя на страницу логина.
         """
         redirect_urls = {
-            reverse(POST_CREATE_URL): '/auth/login/?next=/create/',
-            reverse(
-                POST_EDIT_URL,
-                kwargs={'post_id': self.post.pk}
-            ): f'/auth/login/?next=/posts/{self.post.pk}/edit/',
+            POST_CREATE_URL: POST_CREATE_REDIRECT_URL,
+            POST_EDIT_URL: POST_EDIT_REDIRECT_URL,
         }
         for url, expected_redirect in redirect_urls.items():
             with self.subTest(url=url):
@@ -102,17 +132,12 @@ class PostURLSTests(TestCase):
 
     def test_urls_uses_correct_template(self):
         """URL-адрес использует соответствующий шаблон."""
-        for address, params in self.url_templates_names.items():
-            template, arguments = params
-            response = self.authorized_client.get(
-                reverse(address, kwargs=arguments)
-            )
-            with self.subTest(address=address):
+        for url, template, client, status_code in self.pages:
+            response = self.authorized_client.get(url)
+            with self.subTest(url=url):
                 self.assertTemplateUsed(response, template)
 
     def test_404_page_uses_custom_template(self):
         """Страница 404 использует кастомный шаблон."""
-        response = self.guest_client.get(
-            CUSTOM_404_PAGE_URL
-        )
+        response = self.guest_client.get(CUSTOM_404_PAGE_URL)
         self.assertTemplateUsed(response, CUSTOM_404_PAGE_TEMPLATE)

@@ -14,6 +14,10 @@ class Group(models.Model):
 
     def __str__(self):
         return self.title
+    
+    class Meta:
+        verbose_name = 'Группа'
+        verbose_name_plural = 'Группы'
 
 
 class Post(models.Model):
@@ -51,7 +55,9 @@ class Post(models.Model):
         return self.text[:FIRST_FIFTEEN_CHARS_OF_TEXT]
 
     class Meta:
-        ordering = ['-pub_date']
+        verbose_name = 'Запись'
+        verbose_name_plural = 'Записи'
+        ordering = ('-pub_date',)
 
 
 class Comment(models.Model):
@@ -82,7 +88,9 @@ class Comment(models.Model):
         return self.text
 
     class Meta:
-        ordering = ['-created']
+        verbose_name = 'Комментарий'
+        verbose_name_plural = 'Комментарии'
+        ordering = ('-created',)
 
 
 class Follow(models.Model):
@@ -90,9 +98,20 @@ class Follow(models.Model):
         User,
         on_delete=models.CASCADE,
         related_name='follower',
+        verbose_name='Подписчик'
     )
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
         related_name='following',
+        verbose_name='Автор',
     )
+
+    class Meta:
+        verbose_name = 'Подписчик'
+        verbose_name_plural = 'Подписчики'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'author'],
+                name='unique_following')
+        ]

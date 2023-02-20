@@ -9,58 +9,62 @@ from .utils import get_pages
 
 @cache_page(20, key_prefix='index_page')
 def index(request):
-    posts = Post.objects.select_related(
-        'author').select_related(
-        'group').all()
-    page_obj = get_pages(request, posts)
-    return render(request, 'posts/index.html', {'page_obj': page_obj})
+    return render(
+        request,
+        'posts/index.html',
+        {'page_obj': get_pages(
+            request,
+            Post.objects.select_related('author', 'group').all())
+        }
+    )
 
 
 def group_posts(request, slug):
-    group = get_object_or_404(Group, slug=slug)
-    posts = group.posts.all()
-    page_obj = get_pages(request, posts)
-    context = {
-        'group': group,
-        'page_obj': page_obj,
-    }
-    return render(request, 'posts/group_list.html', context)
+    return render(
+        request,
+        'posts/group_list.html',
+        {
+            'page_obj': get_pages(
+                request,
+                get_object_or_404(Group, slug=slug).posts.all()),
+            'group': get_object_or_404(Group, slug=slug),
+        }
+    )
 
 
 def profile(request, username):
     author = get_object_or_404(User, username=username)
-    posts = author.posts.all()
-    page_obj = get_pages(request, posts)
-    context = {
-        'author': author,
-        'page_obj': page_obj,
-    }
-    if request.user.is_authenticated:
-        follower = Follow.objects.filter(
-            user=request.user,
-            author=author
-        ).exists()
-        if not follower:
-            return render(request, 'posts/profile.html', context)
-        context = {
+    if (request.user.is_authenticated) and (request.user != author) and not (
+        Follow.objects.filter(user=request.user,author=author).exists()
+        ):
+        return render(
+            request,
+            'posts/profile.html',
+            {
+                'author': author,
+                'page_obj': get_pages(request, author.posts.all()),
+            }
+        )
+    return render(
+        request,
+        'posts/profile.html',
+        {
             'author': author,
-            'page_obj': page_obj,
+            'page_obj': get_pages(request, author.posts.all()),
             'following': True,
         }
-        return render(request, 'posts/profile.html', context)
-    return render(request, 'posts/profile.html', context)
+    )
 
 
 def post_detail(request, post_id):
-    post = get_object_or_404(Post, pk=post_id)
-    comments = post.comments.all()
-    form = CommentForm(request.POST or None)
-    context = {
-        'post': post,
-        'form': form,
-        'comments': comments,
-    }
-    return render(request, 'posts/post_detail.html', context)
+    return render(
+        request,
+        'posts/post_detail.html',
+        {
+            'post': get_object_or_404(Post, pk=post_id),
+            'form': CommentForm(request.POST or None),
+        }
+    )
 
 
 @login_required
@@ -111,12 +115,14 @@ def add_comment(request, post_id):
 
 @login_required
 def follow_index(request):
-    posts = Post.objects.filter(author__following__user=request.user)
-    page_obj = get_pages(request, posts)
-    context = {
-        'page_obj': page_obj,
-    }
-    return render(request, 'posts/follow.html', context)
+    return render(
+        request,
+        'posts/follow.html',
+        {'page_obj': get_pages(
+            request,
+            Post.objects.filter(author__following__user=request.user))
+        }
+    )
 
 
 @login_required
@@ -131,8 +137,9 @@ def profile_follow(request, username):
 
 @login_required
 def profile_unfollow(request, username):
-    author = get_object_or_404(User, username=username)
-    following = Follow.objects.filter(user=request.user, author=author)
-    if following.exists():
-        following.delete()
+    get_object_or_404(
+        Follow,
+        user=request.user,
+        author=get_object_or_404(User, username=username)
+    ).delete()
     return redirect('posts:profile', username=username)

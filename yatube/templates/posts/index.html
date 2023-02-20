@@ -7,12 +7,11 @@
   {% endblock %}
 </title>
 
-{% comment %} {% cache 20 index_page %} {% endcomment %}
 {% block content %}
   <div class="container py-5">
     <h1>Последние обновления на сайте</h1>
     <br>
-    {% include 'posts/includes/switcher.html' %}
+    {% include 'posts/includes/switcher.html' with index=True %}
     {% for post in page_obj %}
       {% include 'includes/post_card.html' %}
       {% if post.group %}
@@ -25,4 +24,3 @@
     {% include 'posts/includes/paginator.html' %}
   </div>
 {% endblock %}
-{% comment %} {% endcache %} {% endcomment %}

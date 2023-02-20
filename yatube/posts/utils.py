@@ -1,10 +1,8 @@
 from django.core.paginator import Paginator
 
 
-NUMBER_OF_POSTS = 10
-
-
 def get_pages(request, post_list):
-    paginator = Paginator(post_list, NUMBER_OF_POSTS)
+    posts_per_page = 10
+    paginator = Paginator(post_list, posts_per_page)
     page_number = request.GET.get('page')
     return paginator.get_page(page_number)
