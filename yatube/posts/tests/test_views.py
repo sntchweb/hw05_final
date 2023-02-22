@@ -242,7 +242,7 @@ class PostsViewsTests(TestCase):
         self.assertTrue(Follow.objects.filter(
             user=self.user,
             author=self.post.author).exists()
-            )
+        )
 
     def test_authorized_user_can_unfollow(self):
         """Авторизованный пользователь может удалять
@@ -252,7 +252,7 @@ class PostsViewsTests(TestCase):
         self.assertFalse(Follow.objects.filter(
             user=self.user,
             author=self.post.author).exists()
-            )
+        )
 
     def test_new_post_on_followers_page(self):
         """Новая запись пользователя появляется в ленте тех,

@@ -5,7 +5,7 @@ from django.urls import reverse
 from django.core.cache import cache
 
 from posts.models import Group, Post, User
-from yatube.urls import handler404, handler403
+from yatube.urls import handler404
 
 
 GROUP_SLUG = 'test_group'
