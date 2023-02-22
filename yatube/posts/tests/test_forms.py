@@ -21,7 +21,6 @@ GROUP_1_SLUG = 'test-first-group-slug'
 GROUP_2_SLUG = 'test-second-group-slug'
 TEST_1ST_GROUP_DESCRIPTION = 'Test first group description'
 TEST_2ND_GROUP_DESCRIPTION = 'Test second group description'
-POST_PK = 1
 NEW_TEXT = 'Test form text'
 CHANGED_TEXT = 'Changed test form text'
 COMMENT_TEXT = 'Test comment text'
@@ -40,10 +39,6 @@ SMALL_GIF = (
 PROFILE_URL = reverse('posts:profile', args=[TEST_USER])
 POST_CREATE_URL = reverse('posts:post_create')
 INDEX_URL = reverse('posts:index')
-POST_EDIT_URL = reverse('posts:post_edit', args=[POST_PK])
-POST_DETAIL_URL = reverse('posts:post_detail', args=[POST_PK])
-ADD_COMMENT_URL = reverse('posts:add_comment', args=[POST_PK])
-POST_COMMENT_REDIRECT_URL = f'/auth/login/?next=/posts/{POST_PK}/comment/'
 
 
 @override_settings(MEDIA_ROOT=TEMP_MEDIA_ROOT)
@@ -70,6 +65,12 @@ class PostFormTest(TestCase):
         cls.test_text = NEW_TEXT
         cls.test_changed_text = CHANGED_TEXT
         cls.comment_text = COMMENT_TEXT
+        cls.POST_EDIT_URL = reverse('posts:post_edit', args=[cls.post.pk])
+        cls.POST_DETAIL_URL = reverse('posts:post_detail', args=[cls.post.pk])
+        cls.ADD_COMMENT_URL = reverse('posts:add_comment', args=[cls.post.pk])
+        cls.POST_COMMENT_REDIRECT_URL = (
+            f'/auth/login/?next=/posts/{cls.post.pk}/comment/'
+        )
 
     @classmethod
     def tearDownClass(cls):
@@ -119,21 +120,21 @@ class PostFormTest(TestCase):
             'group': self.new_group.id
         }
         response_edit = self.authorized_post_author.post(
-            POST_EDIT_URL,
+            self.POST_EDIT_URL,
             data=form_data,
             follow=True,
         )
         post_change = Post.objects.get(pk=self.post.pk)
         self.assertEqual(post_change.text, form_data['text'])
         self.assertEqual(post_change.group.id, form_data['group'])
-        self.assertRedirects(response_edit, POST_DETAIL_URL)
+        self.assertRedirects(response_edit, self.POST_DETAIL_URL)
 
     def test_write_comment_can_only_authorized_user(self):
         """Писать комментарии может только авторизованный пользвоатель."""
         form_data = {'text': COMMENT_TEXT}
         post_comments = 0
         self.authorized_client.post(
-            ADD_COMMENT_URL,
+            self.ADD_COMMENT_URL,
             data=form_data,
             follow=True
         )
@@ -145,11 +146,11 @@ class PostFormTest(TestCase):
         """Неавторизованный пользователь не может писать комментарии."""
         form_data = {'text': COMMENT_TEXT}
         response = self.guest_client.post(
-            ADD_COMMENT_URL,
+            self.ADD_COMMENT_URL,
             data=form_data,
             follow=True
         )
         post = Post.objects.get(pk=self.post.pk)
         total_post_comments = post.comments.count()
         self.assertEqual(total_post_comments, 0)
-        self.assertRedirects(response, POST_COMMENT_REDIRECT_URL)
+        self.assertRedirects(response, self.POST_COMMENT_REDIRECT_URL)

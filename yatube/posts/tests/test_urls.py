@@ -14,19 +14,14 @@ TEST_AUTHOR = 'test_urls0'
 TEST_POST_TEXT = 'Test post text'
 TEST_GROUP_TITLE = 'Test group title'
 TEST_GROUP_DESCRIPTION = 'Test group description'
-POST_PK = 1
 
 INDEX_URL = reverse('posts:index')
 GROUP_URL = reverse('posts:group_list', args=[GROUP_SLUG])
 PROFILE_URL = reverse('posts:profile', args=[TEST_USER])
-POST_ID_URL = reverse('posts:post_detail', args=[POST_PK])
 POST_CREATE_URL = reverse('posts:post_create')
-POST_EDIT_URL = reverse('posts:post_edit', args=[POST_PK])
 POST_CREATE_REDIRECT_URL = '/auth/login/?next=/create/'
-POST_EDIT_REDIRECT_URL = f'/auth/login/?next=/posts/{POST_PK}/edit/'
 UNEXISTING_PAGE_URL = '/bad/address/'
 CUSTOM_404_PAGE_URL = handler404
-CUSTOM_403_PAGE_URL = handler403
 
 INDEX_TEMPLATE = 'posts/index.html'
 GROUP_TEMPLATE = 'posts/group_list.html'
@@ -57,6 +52,11 @@ class PostURLSTests(TestCase):
         cls.authorized_client.force_login(cls.user)
         cls.authorized_client_post_author = Client()
         cls.authorized_client_post_author.force_login(cls.author)
+        cls.POST_ID_URL = reverse('posts:post_detail', args=[cls.post.pk])
+        cls.POST_EDIT_URL = reverse('posts:post_edit', args=[cls.post.pk])
+        cls.POST_EDIT_REDIRECT_URL = (
+            f'/auth/login/?next=/posts/{cls.post.pk}/edit/'
+        )
         cls.index_data = (
             INDEX_URL,
             INDEX_TEMPLATE,
@@ -76,7 +76,7 @@ class PostURLSTests(TestCase):
             HTTPStatus.OK
         )
         cls.post_detail_data = (
-            POST_ID_URL,
+            cls.POST_ID_URL,
             POST_ID_TEMPLATE,
             cls.guest_client,
             HTTPStatus.OK
@@ -109,7 +109,7 @@ class PostURLSTests(TestCase):
 
     def test_post_edit_available_to_author(self):
         """Страница posts/<post_id>/edit/ доступна автору поста."""
-        response = self.authorized_client_post_author.get(POST_EDIT_URL)
+        response = self.authorized_client_post_author.get(self.POST_EDIT_URL)
         self.assertEqual(response.status_code, HTTPStatus.OK)
 
     def test_create_post_authorized_user(self):
@@ -123,7 +123,7 @@ class PostURLSTests(TestCase):
         """
         redirect_urls = {
             POST_CREATE_URL: POST_CREATE_REDIRECT_URL,
-            POST_EDIT_URL: POST_EDIT_REDIRECT_URL,
+            self.POST_EDIT_URL: self.POST_EDIT_REDIRECT_URL,
         }
         for url, expected_redirect in redirect_urls.items():
             with self.subTest(url=url):
