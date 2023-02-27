@@ -26,7 +26,7 @@ CUSTOM_404_PAGE_URL = handler404
 INDEX_TEMPLATE = 'posts/index.html'
 GROUP_TEMPLATE = 'posts/group_list.html'
 PROFILE_TEMPLATE = 'posts/profile.html'
-POST_ID_TEMPLATE = 'posts/post_detail.html'
+POST_DETAIL_TEMPLATE = 'posts/post_detail.html'
 CUSTOM_404_PAGE_TEMPLATE = 'core/404.html'
 CUSTOM_403_PAGE_TEMPLATE = 'core/403csrf.html'
 
@@ -77,7 +77,7 @@ class PostURLSTests(TestCase):
         )
         cls.post_detail_data = (
             cls.POST_ID_URL,
-            POST_ID_TEMPLATE,
+            POST_DETAIL_TEMPLATE,
             cls.guest_client,
             HTTPStatus.OK
         )
