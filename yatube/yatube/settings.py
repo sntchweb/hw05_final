@@ -15,6 +15,8 @@ CSRF_FAILURE_VIEW = 'core.views.csrf_failure'
 DEBUG = True
 
 ALLOWED_HOSTS = [
+    'www.sntchweb.pythonanywhere.com',
+    'sntchweb.pythonanywhere.com',
     'localhost',
     '127.0.0.1',
     '[::1]',
