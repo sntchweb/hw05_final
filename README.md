@@ -32,3 +32,6 @@ py manage.py runserver
 - Python 3.9
 - Django 2.2
 - SQLite
+
+## Автор 
+Лашин Артём
