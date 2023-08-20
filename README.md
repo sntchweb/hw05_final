@@ -33,5 +33,5 @@ py manage.py runserver
 - Django 2.2
 - SQLite
 
-## Автор 
+## Автор:
 Лашин Артём
